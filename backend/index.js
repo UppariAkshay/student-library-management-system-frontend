@@ -64,7 +64,46 @@ const storage = multer.diskStorage({
     }
 })
 
+const upload = multer( {storage} )
+
 const fs = require('fs');
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+app.post('/upload', upload.fields([{name: 'student_photo'}, {name: 'student_video'}]), async (req, res) => {
+    const photo_path = req.files.student_photo ? req.files.student_photo[0].path : null;
+    const video_path = req.files?.student_video ? req.files.student_video[0].path : null;
+    const {student_name, student_class} = req.body
+
+    const insertIntoDB = `
+    INSERT INTO student (Name, Class, Photo_path, video_path) VALUES ('${student_name}', '${student_class}', '${photo_path}', '${video_path}')`
+
+    db.run(insertIntoDB)
+
+    res.send({
+        photo_path,
+        video_path,
+    });
+    
+})
+
+app.post('/upload-book', async (request, response) => {
+  const {bookName, author, publication, year} = request.body
+  const insertNewBook = `INSERT INTO books (Name, Author, Publication, Year) VALUES ('${bookName}', '${author}', '${publication}', '${year}')`
+
+  await db.run(insertNewBook)
+
+  response.send('Book Added Successfully')
+})
+
+app.get('/all-students', async (request, response) => {
+  const getAllStudents = `
+  SELECT * FROM student`
+
+  const studentsList = await db.all(getAllStudents)
+  response.send(studentsList)
+})
