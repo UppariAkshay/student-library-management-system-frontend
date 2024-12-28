@@ -100,10 +100,10 @@ app.post('/upload-book', async (request, response) => {
   response.send('Book Added Successfully')
 })
 
-// app.get('/all-students', async (request, response) => {
-//   const getAllStudents = `
-//   SELECT * FROM student`
+app.get('/all-students', async (request, response) => {
+  const getAllStudents = `
+  SELECT * FROM student`
 
-//   const studentsList = await db.all(getAllStudents)
-//   response.send(studentsList)
-// })
+  const studentsList = await db.all(getAllStudents)
+  response.send(studentsList)
+})
