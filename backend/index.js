@@ -26,6 +26,7 @@ const initializeDbAndServer = async () => {
     // Create table if it doesn't exist
     const createStudentTableQuery = `
       CREATE TABLE IF NOT EXISTS student (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT,
         Class TEXT,
         Photo_path TEXT,
@@ -35,6 +36,7 @@ const initializeDbAndServer = async () => {
 
     const createBookTableQuery = `
     CREATE TABLE IF NOT EXISTS books (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Name TEXT,
     Author TEXT,
     Publication TEXT,
@@ -67,6 +69,7 @@ const storage = multer.diskStorage({
 const upload = multer( {storage} )
 
 const fs = require('fs');
+const { get } = require('http')
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
@@ -74,7 +77,7 @@ if (!fs.existsSync('uploads')) {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
-app.post('/upload', upload.fields([{name: 'student_photo'}, {name: 'student_video'}]), async (req, res) => {
+app.post('/upload-student', upload.fields([{name: 'student_photo'}, {name: 'student_video'}]), async (req, res) => {
     const photo_path = req.files.student_photo ? req.files.student_photo[0].path : null;
     const video_path = req.files?.student_video ? req.files.student_video[0].path : null;
     const {student_name, student_class} = req.body
@@ -84,10 +87,12 @@ app.post('/upload', upload.fields([{name: 'student_photo'}, {name: 'student_vide
 
     db.run(insertIntoDB)
 
-    res.send({
-        photo_path,
-        video_path,
-    });
+    const allStudents = `
+    SELECT * FROM student`
+
+    const allStudentsList = await db.all(allStudents)
+    
+    res.send(allStudentsList)
     
 })
 
@@ -97,7 +102,7 @@ app.post('/upload-book', async (request, response) => {
 
   await db.run(insertNewBook)
 
-  response.send('Book Added Successfully')
+  response.send({message: 'Book Added Successfully'})
 })
 
 app.get('/all-students', async (request, response) => {
@@ -105,5 +110,87 @@ app.get('/all-students', async (request, response) => {
   SELECT * FROM student`
 
   const studentsList = await db.all(getAllStudents)
+  response.send(studentsList)
+})
+
+app.get('/all-books', async (request, response) => {
+  const gettingAllBooks = `
+  SELECT * FROM books`
+
+  const booksList = await db.all(gettingAllBooks)
+
+  response.send(booksList)
+})
+
+app.post('/update-book/:book_id', async (request, response) => {
+  const {Name, Author, Publication, Year} = request.body
+  const {book_id} = request.params
+
+  console.log(Name)
+
+  const updateBook = `
+  UPDATE books SET Name = '${Name}', Author = '${Author}', Publication = '${Publication}', Year = '${Year}' WHERE Id = ${book_id}`
+
+  await db.run(updateBook)
+
+  const getBooksData = `
+  SELECT * FROM books`
+
+  const allBooks = await db.all(getBooksData)
+
+  response.send(allBooks)
+
+})
+
+app.delete('/delete-book/:book_id', async (request, response) => {
+  const {book_id} = request.params
+
+  const deleteBook = `
+  DELETE FROM books WHERE Id = ${book_id}`
+
+  await db.run(deleteBook)
+
+  const allBooks = `
+  SELECT * FROM books`
+
+  const booksList = await db.all(allBooks) 
+  response.send(booksList)
+})
+
+app.post('/update-student/:student_id', upload.fields([{name: 'photo_path'}, {name: 'video_path'}]) , async (request, response) => {
+  const {student_id} = request.params
+  const {student_name, student_class} = request.body
+  const photo = request.files.photo_path ? request.files.photo_path[0].path : null
+  const video = request.files.video_path ? request.files.video_path[0].path : null
+
+
+  const updateStudent = `
+  UPDATE student SET Name = '${student_name}' , Class = '${student_class}', Photo_path = '${photo}', video_path = '${video}' WHERE Id = ${student_id}`
+
+  await db.run(updateStudent)
+  
+  const getAllStudents = `
+  SELECT * FROM student`
+
+  const allStudents = await db.all(getAllStudents)
+
+  console.log(allStudents)
+
+  response.send(allStudents)
+})
+
+app.delete('/delete-student/:student_id', async (request, response) => {
+  const {student_id} = request.params
+
+  const delteStudent = `
+  DELETE FROM student WHERE Id = ${student_id}`
+
+  await db.run(delteStudent)
+
+  const allStudents = `
+  SELECT * FROM student`
+
+  const studentsList = await db.all(allStudents)
+
   response.send(studentsList)
 })
