@@ -10,6 +10,7 @@ const Student = () => {
     const [studentTableData, setStudentTableData] = useState()
     const [editStudentId, setEditStudentId] = useState(-1)
     const [editStudentData, setEditStudentData] = useState({})
+    const [studentFormError, setStudentFormError] = useState('')
 
     const [bookName, setBookName] = useState()
     const [author, setAuthor] = useState()
@@ -39,13 +40,17 @@ const Student = () => {
             const response = await fetch('http://localhost:5000/all-books')
             const booksList = await response.json()
 
-
             setBooksTableData(booksList)
+
+            console.log(booksList)
+
+            // setBooksTableData(booksList)
         }
         
-        fetchAllStudent()
-        fetchAllBooks()
+         fetchAllStudent()
+         fetchAllBooks()
     }, [])
+
 
 
 
@@ -53,10 +58,10 @@ const Student = () => {
         e.preventDefault()
 
         const formData = new FormData()
-        formData.append("student_photo", studentPhoto)
-        formData.append("student_video", studentVideo)
-        formData.append("student_name", studentName)
-        formData.append("student_class", studentClass)
+        formData.append("photo", studentPhoto)
+        formData.append("video", studentVideo)
+        formData.append("name", studentName)
+        formData.append("classs", studentClass)
 
         const options = {
             method: 'POST',
@@ -66,10 +71,16 @@ const Student = () => {
         const response = await fetch('http://localhost:5000/upload-student', options)
         const data = await response.json()
 
+        console.log(response)
+        console.log(data)
         
         if (response.ok === true)
         {
-            setStudentTableData(data)
+            setStudentTableData(prevState => ([...prevState, data]))
+            setStudentFormError('')
+        }
+        else{
+            setStudentFormError(data.error)
         }
         
     }
@@ -93,7 +104,6 @@ const Student = () => {
         if (response.ok === true)
         {
             setBooksTableData(data)
-            setBookFormStatus(data.message)
         }
     }
 
@@ -153,11 +163,14 @@ const Student = () => {
             console.log('student row and student details are', eachStudent, studentTableData)
 
             return <tr>
-                <td>{eachStudent.Id}</td>
-                <td>{eachStudent.Name}</td>
-                <td>{eachStudent.Class}</td>
-                <td><img className="studentTableImageIMG" src={`http://localhost:5000/${studentTableData[0].Photo_path}`} /></td>
-                <td><ReactPlayer height={100} width={150} url={`http://localhost:5000/${studentTableData[0].video_path}`} controls/></td>
+                <td>{eachStudent._id}</td>
+                <td>{eachStudent.name}</td>
+                <td>{eachStudent.class}</td>
+                <td><img className="studentTableImageIMG" src={`data:image/png;base64,${eachStudent.photo}`} /></td>
+                <td><video width="200" controls>
+                        <source src={`data:video/mp4;base64,${eachStudent.video}`} type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video></td>
                 <td><button onClick={ (e) => onClickEdit(eachStudent.Id)} className="btn btn-primary">Edit</button><button onClick={ () => onClickDelteStudent(eachStudent)} className="btn btn-dark">Delete</button></td>
         </tr>
         }
@@ -220,11 +233,11 @@ const Student = () => {
         const displayNonEditableFormat = (eachBook) => {
             console.log('non edit')
             return <tr> 
-            <td>{eachBook.Id}</td>
-            <td>{eachBook.Name}</td>
-            <td>{eachBook.Author}</td>
-            <td>{eachBook.Publication}</td>
-            <td>{eachBook.Year}</td>
+            <td>{eachBook._id}</td>
+            <td>{eachBook.name}</td>
+            <td>{eachBook.author}</td>
+            <td>{eachBook.publication}</td>
+            <td>{eachBook.year}</td>
             <td><button className="btn btn-primary" onClick={ () => onClickEditBook(eachBook)}>Edit</button><button onClick={ () =>deleteBook(eachBook.Id) } className="btn btn-dark">Delete</button></td>
         </tr>
         }
@@ -263,6 +276,7 @@ const Student = () => {
                     <label>Video:</label>
                     <input onChange={(e) => setStudentVideo(e.target.files[0])} className="form-control" type='file' />
                 </div>
+                <p>{studentFormError}</p>
                 <div className="d-flex flex-direction-row justify-content-spacebetween">
                     <button type='submit' className="btn btn-dark">Save</button>
                     <button type="button" className="btn btn-warning">Cancel</button>

@@ -1,3 +1,6 @@
+const dotenv = require('dotenv')
+dotenv.config()
+
 const express = require('express')
 const path = require('path')
 
@@ -8,118 +11,99 @@ const sqlite3 = require('sqlite3')
 
 const cors = require('cors');  
 
+const mongoose = require('mongoose')
+const bodyParser = require('body-parser')
+const { buffer } = require('stream/consumers')
+
 const dbPath = path.join(__dirname, 'studentLibraryDatabase.db')
 
 let db = null
 
-const app = express()
-app.use(cors())
-app.use(express.json())
+const PORT = 5000
 
-const initializeDbAndServer = async () => {
-  try {
-    db = await open({
-      filename: dbPath,
-      driver: sqlite3.Database,
-    })
-    
-    // Create table if it doesn't exist
-    const createStudentTableQuery = `
-      CREATE TABLE IF NOT EXISTS student (
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT,
-        Class TEXT,
-        Photo_path TEXT,
-        video_path TEXT
-      )
-    `;
+mongoose.connect(process.env.MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true})
+.then(() => console.log('MongoDB connected'))
+.catch((err) => console.log('MongoDB Connection failed', err));
 
-    const createBookTableQuery = `
-    CREATE TABLE IF NOT EXISTS books (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT,
-    Author TEXT,
-    Publication TEXT,
-    Year DATE)`
-    
-    // Execute the query to create the table
-    await db.run(createStudentTableQuery)
-    await db.run(createBookTableQuery)
-    
-    app.listen(5000, () => {
-      console.log('Server Running at http://localhost:5000/')
-    })
-  } catch (e) {
-    console.log(`DB Error is ${e.message}`)
-    process.exit(1)
-  }
-}
-
-initializeDbAndServer()
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/')
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname))
-    }
+const studentSchema = new mongoose.Schema({
+  name: String,
+  class: String,
+  photo: String,
+  video: String
 })
 
-const upload = multer( {storage} )
-
-const fs = require('fs');
-const { get } = require('http')
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const StudentData = mongoose.model('studentData',studentSchema)
 
 
-app.post('/upload-student', upload.fields([{name: 'student_photo'}, {name: 'student_video'}]), async (req, res) => {
-    const photo_path = req.files.student_photo ? req.files.student_photo[0].path : null;
-    const video_path = req.files?.student_video ? req.files.student_video[0].path : null;
-    const {student_name, student_class} = req.body
 
-    const insertIntoDB = `
-    INSERT INTO student (Name, Class, Photo_path, video_path) VALUES ('${student_name}', '${student_class}', '${photo_path}', '${video_path}')`
+const booksSchema = new mongoose.Schema({
+  name: String,
+  author: String,
+  publication: String,
+  year: String
+})
 
-    db.run(insertIntoDB)
+const BooksData = mongoose.model('booksData' ,booksSchema)
 
-    const allStudents = `
-    SELECT * FROM student`
 
-    const allStudentsList = await db.all(allStudents)
-    
-    res.send(allStudentsList)
+const app = express()
+app.use(cors())
+app.use(bodyParser.json())
+
+
+const storage = multer.memoryStorage()
+const upload = multer({storage});
+
+app.post('/upload-student', upload.fields([{name: 'photo'}, {name: 'video'}]), async (req, res) => {
+  
+    const photo = req.files.photo[0]
+    const video = req.files.video[0]
+    const {name, classs} = req.body
+
+    const base64Photo = photo.buffer.toString('base64')
+    const base64Video = video.buffer.toString('base64')
+    // const base64Video = video.buffer.toString('base64')
+
+    const newStudentData = new StudentData({
+      name: name,
+      class: classs,
+      photo: base64Photo,
+      video: base64Video
+    })
+
+    const MAX_VIDEO_SIZE = 7 * 1024 * 1024; // 7MB in bytes
+    if (video.size > MAX_VIDEO_SIZE) {
+      res.status(400).send( {error: 'video file size exceeds the allowed limit of 7MB.'} );
+    }else{
+      const savedStudentData = await newStudentData.save()
+      res.status(200).send(savedStudentData)
+    }
     
 })
 
 app.post('/upload-book', async (request, response) => {
   const {bookName, author, publication, year} = request.body
-  const insertNewBook = `INSERT INTO books (Name, Author, Publication, Year) VALUES ('${bookName}', '${author}', '${publication}', '${year}')`
 
-  await db.run(insertNewBook)
+  const newBook = new BooksData({
+    name: bookName,
+    author: author,
+    publication: publication,
+    year: year
+  }) 
 
-  response.send({message: 'Book Added Successfully'})
+  const savedBook = await newBook.save()
+  response.send(savedBook)
 })
 
 app.get('/all-students', async (request, response) => {
-  const getAllStudents = `
-  SELECT * FROM student`
-
-  const studentsList = await db.all(getAllStudents)
+  const studentsList = await StudentData.find()
   response.send(studentsList)
 })
 
 app.get('/all-books', async (request, response) => {
-  const gettingAllBooks = `
-  SELECT * FROM books`
+  const allBooks = await BooksData.find()
 
-  const booksList = await db.all(gettingAllBooks)
-
-  response.send(booksList)
+  response.send(allBooks)
 })
 
 app.post('/update-book/:book_id', async (request, response) => {
@@ -159,24 +143,12 @@ app.delete('/delete-book/:book_id', async (request, response) => {
 
 app.post('/update-student/:student_id', upload.fields([{name: 'photo_path'}, {name: 'video_path'}]) , async (request, response) => {
   const {student_id} = request.params
-  const {student_name, student_class} = request.body
+  const {name} = request.body
   const photo = request.files.photo_path ? request.files.photo_path[0].path : null
   const video = request.files.video_path ? request.files.video_path[0].path : null
 
-
-  const updateStudent = `
-  UPDATE student SET Name = '${student_name}' , Class = '${student_class}', Photo_path = '${photo}', video_path = '${video}' WHERE Id = ${student_id}`
-
-  await db.run(updateStudent)
   
-  const getAllStudents = `
-  SELECT * FROM student`
-
-  const allStudents = await db.all(getAllStudents)
-
-  console.log(allStudents)
-
-  response.send(allStudents)
+  
 })
 
 app.delete('/delete-student/:student_id', async (request, response) => {
@@ -194,3 +166,7 @@ app.delete('/delete-student/:student_id', async (request, response) => {
 
   response.send(studentsList)
 })
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
