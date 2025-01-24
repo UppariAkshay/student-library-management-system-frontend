@@ -30,14 +30,14 @@ const Student = () => {
     useEffect(() => {
 
         const fetchAllStudent = async () => {
-            const response = await fetch('http://localhost:5000/all-students')
+            const response = await fetch('https://student-library-management-system-backend.vercel.app/all-students')
             const data = await response.json()
 
             setStudentTableData(data)
         }
 
         const fetchAllBooks = async () => {
-            const response = await fetch('http://localhost:5000/all-books')
+            const response = await fetch('https://student-library-management-system-backend.vercel.app/all-books')
             const booksList = await response.json()
 
             setBooksTableData(booksList)
@@ -68,7 +68,7 @@ const Student = () => {
             body: formData
         }
 
-        const response = await fetch('http://localhost:5000/upload-student', options)
+        const response = await fetch('https://student-library-management-system-backend.vercel.app/upload-student', options)
         const data = await response.json()
 
         console.log(response)
@@ -98,7 +98,7 @@ const Student = () => {
             body: JSON.stringify(bookFormData),
         }
 
-        const response = await fetch('http://localhost:5000/upload-book', options)
+        const response = await fetch('https://student-library-management-system-backend.vercel.app/upload-book', options)
         const data = await response.json()
 
         if (response.ok === true)
@@ -123,7 +123,7 @@ const Student = () => {
                 method: 'POST',
                 body: editStudentFormData
             }
-            const response = await fetch(`http://localhost:5000/update-student/${studentId}`, options)
+            const response = await fetch(`https://student-library-management-system-backend.vercel.app/${studentId}`, options)
             const allStudentsList = await response.json()
 
             console.log(allStudentsList, 'all students list')
@@ -190,7 +190,7 @@ const Student = () => {
                     'Content-Type': 'application/json'
                 }
             }
-            const response = await fetch(`http://localhost:5000/update-book/${bookId}`, options)
+            const response = await fetch(`https://student-library-management-system-backend.vercel.app/${bookId}`, options)
             const updatedBooksList = await response.json()
             
             if (response.ok === true)
