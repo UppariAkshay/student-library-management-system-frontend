@@ -139,8 +139,10 @@ const Student = () => {
                 method: 'DELETE',
             }
 
-            const response = await fetch(`http://localhost:5000/delete-student/${eachStudent.Id}`, options)
+            const response = await fetch(`https://student-library-management-system-backend.vercel.app/delete-student/${eachStudent._id}`, options)
             const studentsList = await response.json()
+
+            console.log(studentsList)
 
             setStudentTableData(studentsList)
         }
@@ -210,8 +212,10 @@ const Student = () => {
                 method: 'DELETE',
             }
 
-            const response = await fetch(`http://localhost:5000/delete-book/${bookId}`, options)
+            const response = await fetch(`https://student-library-management-system-backend.vercel.app/delete-book/${bookId}`, options)
             const allBooksList = await response.json()
+
+            console.log(allBooksList)
 
             setBooksTableData(allBooksList)
         }
@@ -238,7 +242,7 @@ const Student = () => {
             <td>{eachBook.author}</td>
             <td>{eachBook.publication}</td>
             <td>{eachBook.year}</td>
-            <td><button className="btn btn-primary" onClick={ () => onClickEditBook(eachBook)}>Edit</button><button onClick={ () =>deleteBook(eachBook.Id) } className="btn btn-dark">Delete</button></td>
+            <td><button className="btn btn-primary" onClick={ () => onClickEditBook(eachBook)}>Edit</button><button onClick={ () =>deleteBook(eachBook._id) } className="btn btn-dark">Delete</button></td>
         </tr>
         }
 

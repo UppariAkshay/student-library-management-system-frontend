@@ -9,7 +9,8 @@ const cors = require('cors');
 
 const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
-const { buffer } = require('stream/consumers')
+const { buffer } = require('stream/consumers');
+const { error } = require('console');
 
 
 
@@ -89,7 +90,9 @@ app.post('/upload-book', async (request, response) => {
   }) 
 
   const savedBook = await newBook.save()
-  response.send(savedBook)
+  
+  const allBooksList = await BooksData.find()
+  response.send(allBooksList)
 })
 
 app.get('/all-students', async (request, response) => {
@@ -101,6 +104,58 @@ app.get('/all-books', async (request, response) => {
   const allBooks = await BooksData.find()
 
   response.send(allBooks)
+})
+
+app.delete('/delete-student/:studentID', async (request, response) => {
+  try{
+    const {studentID} = request.params
+
+    const deletedStudent = await StudentData.findByIdAndDelete(studentID)
+
+    if (!deletedStudent)
+    {
+      response.status(404)
+      response.send({error: "Item not found."})
+    }
+    else{
+      const studentsList = await StudentData.find()
+      response.status(200)
+      response.send(studentsList)
+    }
+    
+  }
+  catch(e)
+  {
+    response.status(500)
+    response.send({error: "Internal server error"})
+  }
+  
+})
+
+app.delete('/delete-book/:bookID', async (request, response) => {
+  try{
+    const {bookID} = request.params
+
+    const deletedBook = await BooksData.findByIdAndDelete(bookID)
+
+    if (!deletedBook)
+    {
+      response.status(404)
+      response.send({error: "Item not found."})
+    }
+    else{
+      const booksList = await BooksData.find()
+      response.status(200)
+      response.send(booksList)
+    }
+    
+  }
+  catch(e)
+  {
+    response.status(500)
+    response.send({error: "Internal server error"})
+  }
+  
 })
 
 app.listen(PORT, () => {
